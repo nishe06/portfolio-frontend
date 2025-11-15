@@ -1,0 +1,35 @@
+{
+    "success": true,
+    "count": 4,
+    "messages": [
+        {
+            "_id": "6916f89d29933c049660b866",
+            "name": "abc",
+            "email": "xyz@gmail.com",
+            "message": "hello!",
+            "created_at": "2025-11-14T09:38:37.939Z"
+        },
+        {
+            "_id": "6916a9e70d94ad7eb1aacb23",
+            "name": "sajin",
+            "email": "abcd@gmail.com",
+            "message": "hello.",
+            "created_at": "2025-11-14T04:02:47.437Z"
+        },
+        {
+            "_id": "69169e29d9c4a03db6f6568a",
+            "name": "harini",
+            "email": "xyz@gmail.com",
+            "message": "hello!",
+            "created_at": "2025-11-14T03:12:41.741Z"
+        },
+        {
+            "_id": "69169d8876852df67cb2599c",
+            "name": "abc",
+            "email": "abc@gmail.com",
+            "message": "hi!!",
+            "created_at": "2025-11-14T03:10:00.072Z"
+        }
+    ],
+    "last_updated": "2025-11-15T15:06:35.453Z"
+}

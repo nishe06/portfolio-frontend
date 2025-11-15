@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Contact Messages</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f0f0f;
+            color: #ffffff;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #ec4899, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stats {
+            display: flex;
+            gap: 2rem;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+
+        .stat {
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ec4899;
+        }
+
+        .stat-label {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .refresh-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #ec4899, #f97316);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            transition: transform 0.2s;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .messages {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .message-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .message-card:hover {
+            border-color: #ec4899;
+            transform: translateY(-2px);
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #333;
+        }
+
+        .message-info {
+            flex: 1;
+        }
+
+        .message-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 0.25rem;
+        }
+
+        .message-email {
+            color: #ec4899;
+            font-size: 0.95rem;
+        }
+
+        .message-date {
+            color: #a0a0a0;
+            font-size: 0.875rem;
+            text-align: right;
+        }
+
+        .message-content {
+            color: #d0d0d0;
+            font-size: 1rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .message-id {
+            color: #666;
+            font-size: 0.75rem;
+            margin-top: 1rem;
+            font-family: monospace;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #a0a0a0;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #a0a0a0;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h1>📬 Contact Messages</h1>
+            <button onclick="logout()" style="padding: 10px 20px; background: transparent; border: 2px solid #ec4899; color: #ec4899; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                🚪 Logout
+            </button>
+        </div>
+        <p style="color: #a0a0a0; margin-bottom: 2rem;">View all messages submitted through your portfolio contact form</p>
+
+        <div class="stats" id="stats">
+            <div class="stat">
+                <div class="stat-value" id="total-count">0</div>
+                <div class="stat-label">Total Messages</div>
+            </div>
+        </div>
+
+        <button class="refresh-btn" id="refresh-btn" onclick="loadMessages()">🔄 Refresh</button>
+
+        <div id="error-container"></div>
+        <div id="messages-container" class="loading">Loading messages...</div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5001/api/messages';
+        const AUTH_API = 'http://localhost:5001/api/admin';
+
+        // Check authentication on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                window.location.href = 'home.html';
+                return;
+            }
+            loadMessages();
+        });
+
+        async function loadMessages() {
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                window.location.href = 'home.html';
+                return;
+            }
+            const container = document.getElementById('messages-container');
+            const errorContainer = document.getElementById('error-container');
+            const refreshBtn = document.getElementById('refresh-btn');
+            
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '⏳ Loading...';
+            container.innerHTML = '<div class="loading">Loading messages...</div>';
+            errorContainer.innerHTML = '';
+
+            try {
+                const response = await fetch(API_URL, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                // If unauthorized, redirect to login
+                if (response.status === 401) {
+                    localStorage.removeItem('adminToken');
+                    window.location.href = 'home.html';
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    document.getElementById('total-count').textContent = data.count;
+
+                    if (data.messages.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                <h2>No messages yet</h2>
+                                <p>Contact form submissions will appear here.</p>
+                            </div>
+                        `;
+                    } else {
+                        const messagesHTML = data.messages.map(msg => `
+                            <div class="message-card">
+                                <div class="message-header">
+                                    <div class="message-info">
+                                        <div class="message-name">${escapeHtml(msg.name)}</div>
+                                        <div class="message-email">${escapeHtml(msg.email)}</div>
+                                    </div>
+                                    <div class="message-date">${formatDate(msg.created_at)}</div>
+                                </div>
+                                <div class="message-content">${escapeHtml(msg.message)}</div>
+                                <div class="message-id">ID: ${msg._id}</div>
+                            </div>
+                        `).join('');
+                        
+                        container.innerHTML = `<div class="messages">${messagesHTML}</div>`;
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to load messages');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorContainer.innerHTML = `
+                    <div class="error">
+                        ⚠️ Error: ${error.message}. Please try logging in again.
+                    </div>
+                `;
+                container.innerHTML = '';
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = '🔄 Refresh';
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown date';
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Logout function
+        async function logout() {
+            const token = localStorage.getItem('adminToken');
+            
+            try {
+                await fetch(`${AUTH_API}/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            
+            localStorage.removeItem('adminToken');
+            window.location.href = 'home.html';
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadMessages, 30000);
+    </script>
+</body>
+</html>
+
